@@ -45,5 +45,5 @@ function getRoute(string $querystring, RequestMethod $method = RequestMethod::GE
     }
 
     // Skapa och returnera ett Route-objekt
-    return new Route($rutt, $parametrar, $metod);
+    return new Route($rutt, $parametrar, $method);
 }
