@@ -17,7 +17,7 @@ function activities(Route $route, array $postData): Response {
         if (count($route->getParams()) === 1 && $route->getMethod() === RequestMethod::GET) {
             return hamtaEnskild((int) $route->getParams()[0]);
         }
-        if (isset($postData["activity"])&& count($route->getParams()) === 0 && $route->getMethod() === RequestMethod::POST) {
+        if (isset($postData["activity"]) && count($route->getParams()) === 0 && $route->getMethod() === RequestMethod::POST) {
             return sparaNy((string) $postData["activity"]);
         }
         if (count($route->getParams()) === 1 && $route->getMethod() === RequestMethod::PUT) {
@@ -102,12 +102,12 @@ function sparaNy(string $aktivitet): Response {
     // Kontrollera indata
     $kontrolleradAktivitet = trim($aktivitet);
     $kontrolleradAktivitet = filter_var($kontrolleradAktivitet, FILTER_SANITIZE_ENCODED);
-    if($kontrolleradAktivitet===""){
-        $out=new stdClass();
-        $out->error=["Fel vid spara", "activity kan inte vara tom"];
-        return new Response($out,400);
+    if ($kontrolleradAktivitet === "") {
+        $out = new stdClass();
+        $out->error = ["Fel vid spara", "activity kan inte vara tom"];
+        return new Response($out, 400);
     }
-    
+
     try {
 
         // Koppla mot databas
@@ -143,7 +143,7 @@ function sparaNy(string $aktivitet): Response {
  * @return Response
  */
 function uppdatera(int $id, string $aktivitet): Response {
-    
+
     // Kontrollera indata
     $kollatID = filter_var($id, FILTER_VALIDATE_INT);
     if (!$kollatID || $kollatID < 1) {
@@ -153,44 +153,75 @@ function uppdatera(int $id, string $aktivitet): Response {
     }
     $kontrolleradAktivitet = trim($aktivitet);
     $kontrolleradAktivitet = filter_var($kontrolleradAktivitet, FILTER_SANITIZE_ENCODED);
-    if($kontrolleradAktivitet===""){
-        $out=new stdClass();
-        $out->error=["Fel vid spara", "activity kan inte vara tom"];
-        return new Response($out,400);
+    if ($kontrolleradAktivitet === "") {
+        $out = new stdClass();
+        $out->error = ["Fel vid spara", "activity kan inte vara tom"];
+        return new Response($out, 400);
     }
 
-try {
-    // Koppla databas
+    try {
+        // Koppla databas
         $db = connectDb();
 
-    // Uppdatera post
-    $stmt = $db->prepare ("UPDATE kategorier"
-            . " SET kategori=:aktivitet"
-            . " WHERE id=:id");
-    $stmt->execute (["aktivitet" => $kontrolleradAktivitet, "id" => $kollatID]);
-    $antalPoster = $stmt-> rowCount();
-    // Returnera svar
-    $out = new stdClass();
-    if ($antalPoster > 0) {
-        $out -> result = true;
-        $out -> message = ["Uppdatera lyckades" , "0 poster uppdaterades"];
-    } else {
-        $out -> result = false;
-        $out -> message = ["Uppdatera lyckades", "0 poster uppdaterades"];
+        // Uppdatera post
+        $stmt = $db->prepare("UPDATE kategorier"
+                . " SET kategori=:aktivitet"
+                . " WHERE id=:id");
+        $stmt->execute(["aktivitet" => $kontrolleradAktivitet, "id" => $kollatID]);
+        $antalPoster = $stmt->rowCount();
+        // Returnera svar
+        $out = new stdClass();
+        if ($antalPoster > 0) {
+            $out->result = true;
+            $out->message = ["Uppdatera lyckades", "0 poster uppdaterades"];
+        } else {
+            $out->result = false;
+            $out->message = ["Uppdatera lyckades", "0 poster uppdaterades"];
+        }
+
+        return new Response($out, 200);
+    } catch (Exception $ex) {
+        $out = new stdClass();
+        $out->error = ["något gick fel vid uppdatering", $ex->getMessage()];
+        return new Response($out, 400);
     }
-        
-    return new Response($out,200);
-} catch (Exception $ex){
-    $out = new stdClass();
-    $out -> error = ["något gick fel vid uppdatering", $ex ->getMessage()];
-    return new Response($out, 400);
 }
-}
+
 /**
  * Raderar en aktivitet med angivet id
  * @param int $id Id för posten som ska raderas
  * @return Response
  */
 function radera(int $id): Response {
-    return new Response("Raderar aktivitet $id", 200);
+    // Kontrollera id
+    $kollatID = filter_var($id, FILTER_VALIDATE_INT);
+    if (!$kollatID || $kollatID < 1) {
+        $out = new stdClass();
+        $out->error = ["Felaktig indata", "$id är inget giltigt heltal"];
+        return new Response($out, 400);
+    }
+    try {
+        //Koppla mot databas
+        $db = connectDb();
+        // Skicka radera-kommando
+        $stmt = $db->prepare("DELETE FROM kategorier"
+                . " WHERE id=:id");
+        $stmt->execute(["id" => $kollatID]);
+        $antalPoster = $stmt->rowCount();
+
+        // Kontrollera databas-svar
+        $out = new stdClass();
+        if ($antalPoster > 0) {
+            $out->result = true;
+            $out->message = ["Radera lyckades", "$antalPoster post(er) raderades"];
+        } else {
+            $out->result = false;
+            $out->message = ["Radera misslyckades", "Inga poster raderades"];
+        }
+        return new Response($out);
+    } catch (Exception $ex) {
+        $out = new stdClass();
+        $out->error = ["Något gick fel vid radera", $ex->getMessage()];
+        return new Response($out, 400);
+    }
 }

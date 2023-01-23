@@ -243,7 +243,7 @@ function test_UppdateraAktivitet(): string {
             $retur .= "</p>";
         }
         $db->rollBack();
-        
+
         // Cipis bugg, testa med mellanslag som aktivitet
         $db->beginTransaction();
         $nyPost = sparaNy("Nizze");
@@ -261,10 +261,8 @@ function test_UppdateraAktivitet(): string {
         }
         $retur .= "</p>";
 
-        $db->rollBack(); 
-}
-
-        catch (Exception $ex) {
+        $db->rollBack();
+    } catch (Exception $ex) {
         if ($ex->getCode() === 10001) {
             $retur .= "<p class='error'> Spara ny post misslyckades, uppdatera går inte att testa!!!</p>";
         } else {
@@ -280,6 +278,60 @@ function test_UppdateraAktivitet(): string {
  */
 function test_RaderaAktivitet(): string {
     $retur = "<h2>test_RaderaAktivitet</h2>";
-    $retur .= "<p class='ok'>Testar radera aktivitet</p>";
+    try {
+        // Testa felaktigt id (-1)
+        $svar = radera (-1);
+        if ($svar->getStatus() === 400) {
+            $retur .= "<p class='ok'> Radera post med negativt tal ger flrväntat svar 400</p>";
+        } else {
+            $retur .= "<p class='error'> Radera post med negativt tal ger {$svar->getStatus()}"
+                    . "inte förväntat svar 400";
+        }
+        $retur .= "</p>";
+
+        // Testa felaktigt id (sju)
+        $svar = radera ((int)"sju");
+        if ($svar->getStatus() === 400) {
+            $retur .= "<p class='ok'> Radera post med felaktigt id ger flrväntat svar 400</p>";
+        } else {
+            $retur .= "<p class='error'> Radera post med felaktigt id ('sju') ger {$svar->getStatus()}"
+                    . "inte förväntat svar 400";
+        }
+        $retur .= "</p>";
+        // Testa id som inte finns (100)
+        $svar = radera (100);
+        if ($svar->getStatus() === 200 && $svar->getContent()->result===false) {
+            $retur .= "<p class='ok'> Radera post med negativt tal ger förväntat svar 200"
+                    ." och result=false</p>";
+        } else {
+            $retur .= "<p class='error'> Radera post med id som inte finns (100) {$svar->getStatus()}"
+                    . "inte förväntat svar 200";
+        }
+        $retur .= "</p>";
+        // Testa radera nyskapat id
+        $db = connectDB();
+        $db->beginTransaction();
+        $nyPost = sparaNy("Nizze");
+        if ($nyPost->getStatus() !== 200) {
+            throw new Exception("Skapa ny post misslyckades", 10001);
+        }
+        $nyttId = (int) $nyPost->getContent()->id; // Den nya postens id
+        $svar= radera($nyttId);
+        if ($svar->getStatus() === 200 && $svar->getContent()->result===true) {
+            $retur .= "<p class='ok'> Radera post med nyskapat id ger förväntat svar 200"
+                    ." och result=true</p>";
+        } else {
+            $retur .= "<p class='error'> Radera post med nyskapat id ger {$svar->getStatus()}"
+                    . " inte förväntat svar 200";
+        }
+        $db->rollBack();
+        
+    } catch (Exception $ex) {
+        if ($ex->getCode() === 10001) {
+            $retur .= "<p class='error'> Spara ny post misslyckades, uppdatera går inte att testa!!!</p>";
+        } else {
+            $retur .= "<p class='error'> Fel inträffade:<br> {$ex->getMessage()}</p>";
+        }
+    }
     return $retur;
 }
