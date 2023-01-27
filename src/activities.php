@@ -12,19 +12,19 @@ require_once __DIR__ . './funktioner.php';
 function activities(Route $route, array $postData): Response {
     try {
         if (count($route->getParams()) === 0 && $route->getMethod() === RequestMethod::GET) {
-            return hamtaAlla();
+            return hamtaAllaAktiviteter();
         }
         if (count($route->getParams()) === 1 && $route->getMethod() === RequestMethod::GET) {
-            return hamtaEnskild((int) $route->getParams()[0]);
+            return hamtaEnskildAktivitet((int) $route->getParams()[0]);
         }
         if (isset($postData["activity"]) && count($route->getParams()) === 0 && $route->getMethod() === RequestMethod::POST) {
-            return sparaNy((string) $postData["activity"]);
+            return sparaNyAktivitet((string) $postData["activity"]);
         }
         if (count($route->getParams()) === 1 && $route->getMethod() === RequestMethod::PUT) {
-            return uppdatera((int) $route->getParams()[0], (string) $postData["activity"]);
+            return uppdateraAktivitet((int) $route->getParams()[0], (string) $postData["activity"]);
         }
         if (count($route->getParams()) === 1 && $route->getMethod() === RequestMethod::DELETE) {
-            return radera((int) $route->getParams()[0]);
+            return raderaAktivitet((int) $route->getParams()[0]);
         }
     } catch (Exception $exc) {
         return new Response($exc->getMessage(), 400);
@@ -37,7 +37,7 @@ function activities(Route $route, array $postData): Response {
  * Returnerar alla aktiviteter som finns i databasen
  * @return Response
  */
-function hamtaAlla(): Response {
+function hamtaAllaAktiviteter(): Response {
     //Koppla mot databasen
     $db = connectDb();
 
@@ -52,10 +52,12 @@ function hamtaAlla(): Response {
         $post->activity = $row['kategori'];
         $retur[] = $post;
     }
-
+    
+    $out = new stdClass();
+    $out->activities=$retur;
     //Returnera svaret
 
-    return new Response($retur, 200);
+    return new Response($out, 200);
 }
 
 /**
@@ -63,7 +65,7 @@ function hamtaAlla(): Response {
  * @param int $id Id för aktiviteten
  * @return Response
  */
-function hamtaEnskild(int $id): Response {
+function hamtaEnskildAktivitet(int $id): Response {
     // Kontrollera indata
     $kollatID = filter_var($id, FILTER_VALIDATE_INT);
     if (!$kollatID || $kollatID < 1) {
@@ -98,7 +100,7 @@ function hamtaEnskild(int $id): Response {
  * @param string $aktivitet Aktivitet som ska sparas
  * @return Response
  */
-function sparaNy(string $aktivitet): Response {
+function sparaNyAktivitet(string $aktivitet): Response {
     // Kontrollera indata
     $kontrolleradAktivitet = trim($aktivitet);
     $kontrolleradAktivitet = filter_var($kontrolleradAktivitet, FILTER_SANITIZE_ENCODED);
@@ -142,7 +144,7 @@ function sparaNy(string $aktivitet): Response {
  * @param string $aktivitet Ny text
  * @return Response
  */
-function uppdatera(int $id, string $aktivitet): Response {
+function uppdateraAktivitet(int $id, string $aktivitet): Response {
 
     // Kontrollera indata
     $kollatID = filter_var($id, FILTER_VALIDATE_INT);
@@ -192,7 +194,7 @@ function uppdatera(int $id, string $aktivitet): Response {
  * @param int $id Id för posten som ska raderas
  * @return Response
  */
-function radera(int $id): Response {
+function raderaAktivitet(int $id): Response {
     // Kontrollera id
     $kollatID = filter_var($id, FILTER_VALIDATE_INT);
     if (!$kollatID || $kollatID < 1) {
