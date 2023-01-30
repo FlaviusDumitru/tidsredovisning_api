@@ -124,8 +124,8 @@ function test_HamtaAllaUppgifterDatum(): string {
            $retur .= "<p class='ok'> Hämta för stort sidnummer (100) gav {$svar->getStatus()}"
            . "istället för förväntat svar 200</p>";
       } else {
-         $retur .= "<p class='ok'> Hämta datum (1970-01-01 -- 1970-01-01) {$svar->getStatus()}</p>"
-         . " istället för förväntat svar 200";
+         $retur .= "<p class='ok'> Hämta datum (1970-01-01 -- 1970-01-01) {$svar->getStatus()}"
+         . " gav förväntat svar 200 </p>";
          $resultat=$svar->getContent()->tasks;
          if(!$resultat===[]) {
              $retur .= "<p class='error'>Hämta datum (1970-01-01 -- 1970-01-01) ska innehålla en tom array för tasks<br>"
@@ -274,10 +274,39 @@ function test_SparaUppgift(): string {
     }
     $db->rollBack();     
     // Testa beskrivning saknas => 200
-    
+    unset($postData["description"]);
+    $postData["time"]="3:15";
+    $db -> beginTransaction();
+    $svar = sparaNyUppgift($postData);
+    if($svar->getStatus()===200) {
+        $retur .="<p class='ok'>Spara ny uppgift utan beskrivning lyckades</p>";
+    } else {
+        $retur .="<p class='error'>Spara ny uppgift utan beskrivning "
+             ."returnerade {$svar->getStatus()} istället för förväntat 200</p>";
+    }
+    $db->rollBack(); 
     // Testa aktivitetsid felaktigt (-1)
-    
-    // Testa aktivitesid som saknas (100) 
+    $postData["activityId"]=-1;
+    $db -> beginTransaction();
+    $svar = sparaNyUppgift($postData);
+    if($svar->getStatus()===400) {
+        $retur .="<p class='ok'>Spara ny uppgift med felaktigt activityId (-1) misslyckades, som förväntat</p>";
+    } else {
+        $retur .="<p class='error'>Spara ny uppgift utan felaktigt activityId "
+             ."returnerade {$svar->getStatus()} istället för förväntat 400</p>";
+    }
+    $db->rollBack(); 
+    // Testa aktivitesid som saknas (100) => 400 
+    $postData["activityId"]=-1;
+    $db -> beginTransaction();
+    $svar = sparaNyUppgift($postData);
+    if($svar->getStatus()===400) {
+        $retur .="<p class='ok'>Spara ny uppgift med felaktigt activityId (100) misslyckades, som förväntat</p>";
+    } else {
+        $retur .="<p class='error'>Spara ny uppgift utan felaktigt activityId (100)"
+             ."returnerade {$svar->getStatus()} istället för förväntat 400</p>";
+    }
+    $db->rollBack(); 
     
         
     } catch (Exception $ex) {
