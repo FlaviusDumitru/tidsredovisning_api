@@ -180,7 +180,7 @@ function hamtaEnskildUppgift(int $id): Response {
         $out-> id=$row["id"];
         $out-> activityId=$row["KategoriID"];
         $out-> date=$row["Datum"];
-        $out-> time=$row["Tid"];
+        $out-> time=substr($row["Tid"], 0,5);
         $out-> description=$row["Beskrivning"];
         $out-> activity=$row["kategori"];
         
