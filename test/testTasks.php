@@ -357,7 +357,154 @@ function test_SparaUppgift(): string {
  */
 function test_UppdateraUppgifter(): string {
     $retur = "<h2>test_UppdateraUppgifter</h2>";
-    $retur .= "<p class='ok'>Testar uppdatera uppgift</p>";
+    try {
+        $db = connectDb();
+        $db->beginTransaction();
+        $igar = new DateTimeImmutable("yesterday");
+        $imorgon = new DateTimeImmutable("tomorrow");
+
+        $postdata = ["date" => $igar->format('Y-m-d'),
+            "time" => "05:00",
+            "activityId" => 1,
+            "description" => "Hurra vad bra"];
+        // Skapa en ny post som vi kan manipulera
+        $svar = sparaNyUppgift($postdata);
+        if ($svar->getStatus() !== 200) {
+            throw new Exception("Kunde inte skapa ny post. Tester för uppdatering avbryts");
+        }
+        $id = (int) $svar->getContent()->id;
+
+        // Testa felaktigt datum (i morgon)
+        $postdata["date"] = $imorgon->format("Y-m-d");
+        $svar = uppdateraUppgift($id, $postdata);
+        if ($svar->getStatus() === 400) {
+            $retur .= "<p class='ok'>Uppdatera med felaktigt datum (imorgon) misslyckades som förväntat</p>";
+        } else {
+            $retur .= "<p class='error'>Uppdatera med felaktigt datum (imorgon) misslyckades "
+                    . "{$svar->getStatus()} returnerade istället för 400</p>";
+        }
+
+        // Testa felaktigt formatterat datum
+        $postdata["date"] = $igar->format("Y_m_d");
+        $svar = uppdateraUppgift($id, $postdata);
+        if ($svar->getStatus() === 400) {
+            $retur .= "<p class='ok'>Uppdatera med felaktigt formaterat datum ({$postdata['date']}) misslyckades som förväntat</p>";
+        } else {
+            $retur .= "<p class='error'>Uppdatera med felaktigt formaterat datum ({$postdata['date']}) misslyckades "
+                    . "{$svar->getStatus()} returnerade istället för 400</p>";
+        }
+
+        // Testa datum saknas
+        unset($postdata["date"]);
+        $svar = uppdateraUppgift($id, $postdata);
+        if ($svar->getStatus() === 400) {
+            $retur .= "<p class='ok'>Uppdatera med saknar datum misslyckades som förväntat</p>";
+        } else {
+            $retur .= "<p class='error'>Uppdatera med saknat datum misslyckades "
+                    . "{$svar->getStatus()} returnerade istället för 400</p>";
+        }
+
+        // Testa felaktig tid (>8h)
+        $postdata["date"] = $igar->format('Y-m-d');
+        $postdata["time"] = "11:30";
+        $svar = uppdateraUppgift($id, $postdata);
+        if ($svar->getStatus() === 400) {
+            $retur .= "<p class='ok'>Uppdatera med för lång tid (11:30) misslyckades som förväntat</p>";
+        } else {
+            $retur .= "<p class='error'>Uppdatera med för lång tid (11:30) misslyckades "
+                    . "{$svar->getStatus()} returnerade istället för 400</p>";
+        }
+
+        // Testa felaktigt formatterad tid
+        $postdata["time"] = "1_30";
+        $svar = uppdateraUppgift($id, $postdata);
+        if ($svar->getStatus() === 400) {
+            $retur .= "<p class='ok'>Uppdatera med felformatterad tid (1_30) misslyckades som förväntat</p>";
+        } else {
+            $retur .= "<p class='error'>Uppdatera med felformatterad tid (1_30) misslyckades "
+                    . "{$svar->getStatus()} returnerade istället för 400</p>";
+        }
+
+        // Testa tid saknas
+        unset($postdata["time"]);
+        $svar = uppdateraUppgift($id, $postdata);
+        if ($svar->getStatus() === 400) {
+            $retur .= "<p class='ok'>Uppdatera utan tid misslyckades som förväntat</p>";
+        } else {
+            $retur .= "<p class='error'>Uppdatera utan tid misslyckades "
+                    . "{$svar->getStatus()} returnerade istället för 400</p>";
+        }
+
+        // Testa activityId är fel (-1)
+        $postdata["time"] = "1:03";
+        $postdata["activityId"] = -1;
+        if ($svar->getStatus() === 400) {
+            $retur .= "<p class='ok'>Uppdatera med felaktigt activityId misslyckades som förväntat</p>";
+        } else {
+            $retur .= "<p class='error'>Uppdatera med felaktigt activityId misslyckades "
+                    . "{$svar->getStatus()} returnerade istället för 400</p>";
+        }
+
+        // Testa activityId som inte finns (100)
+        $postdata["activityId"] = 100;
+        if ($svar->getStatus() === 400) {
+            $retur .= "<p class='ok'>Uppdatera med activityId som inte finns (100) misslyckades som förväntat</p>";
+        } else {
+            $retur .= "<p class='error'>Uppdatera med activityId som inte finns (100) misslyckades "
+                    . "{$svar->getStatus()} returnerade istället för 400</p>";
+        }
+
+        // Testa activityId saknas
+        unset($postdata["activityId"]);
+        if ($svar->getStatus() === 400) {
+            $retur .= "<p class='ok'>Uppdatera utan activityId misslyckades som förväntat</p>";
+        } else {
+            $retur .= "<p class='error'>Uppdatera utan activityId misslyckades "
+                    . "{$svar->getStatus()} returnerade istället för 400</p>";
+        }
+
+        // Testa felaktigt id (-1)
+        $postdata["activityId"] = 1;
+        $svar = uppdateraUppgift(-1, $postdata);
+        if ($svar->getStatus() === 400) {
+            $retur .= "<p class='ok'>Uppdatera uppgift med felaktigt id (-1) misslyckades som förväntat</p>";
+        } else {
+            $retur .= "<p class='error'>Uppdatera uppgift med felaktigt id (-1) returnerade"
+                    . "{$svar->getStatus()} istället för förväntat 400</p>";
+        }
+
+        // Testa id som inte finns (100)
+        $svar = uppdateraUppgift(100, $postdata);
+        if ($svar->getStatus() === 200) {
+            if ($svar->getContent()->result === false) {
+                $retur .= "<p class='ok'>Uppdatera uppgift som inte finns returnerade false som förväntat</p>";
+            } else {
+                $retur .= "<p class='error'>Uppdatera uppgift som inte finns returnerade true istället för false som förväntat</p>";
+            }
+        } else {
+            $retur .= "<p class='error'>Uppdatera uppgift med felaktigt id (-1) returnerade"
+                    . "{$svar->getStatus()} istället för förväntat 200</p>";
+        }
+
+        // Testa allt OK!
+        $postdata = ["time" => "1:30", "date" => date('Y-m-d'), "activityId" => 1, "description" => "Bara ett fånigt test"];
+        $svar = uppdateraUppgift($id, $postdata);
+        if ($svar->getStatus() === 200) {
+            if ($svar->getContent()->result === true) {
+                $retur .= "<p class='ok'>Uppdatera uppgift uppdaterade post som förväntat</p>";
+            } else {
+                $retur .= "<p class='error'>Uppdatera uppgift returnerade false istället för true som förväntat</p>";
+            }
+        } else {
+            $retur .= "<p class='error'>Uppdatera uppgift returnerade"
+                    . "{$svar->getStatus()} istället för förväntat 200</p>";
+        }
+        $db->rollBack();
+    } catch (Exception $ex) {
+        $db->rollBack();
+        $retur .= "<p class='error'>Något gick fel, tester kan inte fortsätta. {$ex->getMessage()}</p>";
+    }
+
     return $retur;
 }
 
@@ -367,6 +514,52 @@ function test_UppdateraUppgifter(): string {
  */
 function test_RaderaUppgift(): string {
     $retur = "<h2>test_RaderaUppgift</h2>";
-    $retur .= "<p class='ok'>Testar radera uppgift</p>";
+    try {
+    // Testa ogiltigt tal (-1)
+    $svar = raderaUppgift(-1);
+    if ($svar ->getStatus()===400) {
+        $retur .="<p class='ok'>Radera uppgift med ogiltigt tal returnerade 400 som förväntat</p>";
+    } else {
+        $retur .="<p class='error'>Radera uppgift returnerade {$svar->getStatus()} istället för "
+        . " förväntat 400 </p>";
+    }
+    // Testa ta bort post som finns 
+    $db = connectDB(); // Koppla databas
+    $db ->beginTransaction();
+    $postData = ["time" => "1:00", "date" => date('Y-m-d'), "activityId"=>1];
+    $svar = sparaNyUppgift($postData);
+    if ($svar->getStatus()!==200) {
+        throw new Exception("Kunde inte skapa ny post, testerna avbryts!");
+    }
+    $nyttId = (int)$svar->getContent()->id;
+    $svar = raderaUppgift($nyttId);
+    if($svar->getStatus()===200) {
+        if ($svar->getContent()->result===true) {
+            $retur .="<p class='ok'>Radera uppgift lyckades</p>";
+        } else {
+            $retur .="<p class='error'>Radera uppgift returnerade false istället för "
+                    . "förväntat true</p>";
+        }
+    } else {
+        $retur .="<p class='error'>Radera uppgift returnerade {$svar->getStatus()} istället"
+        . "för förväntat 200";
+    }
+    $db -> rollBack();
+    // Testa ta bort post som inte finns
+        $svar = raderaUppgift($nyttId);
+    if($svar->getStatus()===200) {
+        if ($svar->getContent()->result===false) {
+            $retur .="<p class='ok'>Radera uppgift som inte finns lyckades</p>";
+        } else {
+            $retur .="<p class='error'>Radera uppgift som inte finns lyckades</p>";
+        }
+    } else {
+        $retur .="<p class='error'>Radera uppgift som inte finns returnerade {$svar->getStatus()} istället"
+        . "för förväntat 200";
+    }
+    } catch (\Exception $ex) {
+        $retur .="<p class='error'>Något gick fel: {$ex->getMessage()}</p>";
+    }
+    
     return $retur;
 }

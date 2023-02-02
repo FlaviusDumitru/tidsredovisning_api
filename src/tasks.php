@@ -1,7 +1,7 @@
 <?php
 
 declare (strict_types=1);
-
+require_once __DIR__ . './activities.php';
 /**
  * Hämtar en lista med alla uppgifter och tillhörande aktiviteter 
  * Beroende på indata returneras en sida eller ett datumintervall
@@ -243,7 +243,47 @@ function sparaNyUppgift(array $postData): Response {
  * @return Response
  */
 function uppdateraUppgift(int $id, array $postData): Response {
-    return new Response("Uppdaterar task $id", 200);
+    // Kolla indata 
+    $check= kontrolleraIndata($postData);
+        if(kontrolleraIndata($postData) !==""){
+            $out = new stdClass();
+            $out->error=["Felaktig indata", $check]; 
+            return new Response ($out, 400);
+        }
+      $kollatID = filter_var($id, FILTER_VALIDATE_INT);
+    if (!$kollatID || $kollatID < 1) {
+        $out = new stdClass();
+        $out->error = ["Felaktig indata", "$id är inget giltigt heltal"];
+        return new Response($out, 400);
+    }
+    // Koppla databas 
+    $db = connectDB();
+    // Förbered och exekvera SQL
+    $stmt = $db->prepare("UPDATE uppgifter "
+            . "SET Tid=:Tid, "
+            . "Datum=:Datum, "
+            . "Beskrivning=:Beskrivning, "
+            . "KategoriID=:KategoriID "
+            . "WHERE id=:id");
+    $stmt -> execute(["Tid"=>$postData["time"],
+        "Datum"=>$postData["date"],
+        "Beskrivning"=>$postData["description"],
+        "KategoriID"=>$postData["activityId"],
+        "id"=>$kollatID]);
+    
+    // Kontrollera svar och skicka svar
+    $antalPoster = $stmt->rowCount();
+    if($antalPoster===0) {
+        $out = new stdClass();
+        $out -> result=false;
+        $out -> message =["Uppdatera misslyckades", "Inga poster uppdaterades"];
+    } else {
+        $out = new stdClass();
+        $out -> result = true;
+        $out -> message = ["Uppdatera lyckades", "$antalPoster poster uppdaterades"];
+    }
+    return new Response($out);
+    
 }
 
 /**
@@ -252,7 +292,35 @@ function uppdateraUppgift(int $id, array $postData): Response {
  * @return Response
  */
 function raderaUppgift(int $id): Response {
-    return new Response("Raderar task $id", 200);
+    // Kolla indata
+      $kollatID = filter_var($id, FILTER_VALIDATE_INT);
+    if (!$kollatID || $kollatID < 1) {
+        $out = new stdClass();
+        $out->error = ["Felaktig indata", "$id är inget giltigt heltal"];
+        return new Response($out, 400);
+    }
+    // Koppla mot databas
+    $db = connectDB();
+    
+    // Förbered och exekvera SQL
+    $stmt = $db -> prepare ("DELETE FROM uppgifter WHERE id=:id");
+    $stmt -> execute (["id"=>$kollatID]);
+    
+    // Skicka svar
+    $antalPoster = $stmt->rowCount();
+    if($antalPoster===0) {
+        $out = new stdClass();
+        $out -> result=false;
+        $out -> message=["Radera post misslyckades", "Inga poster raderades"];
+        return new Response($out);
+    } else {
+        $out = new stdClass();
+        $out -> result=true;
+        $out -> message=["Radera post lyckades", "$antalPoster poster raderades"];
+        return new Response($out);
+    }
+    
+    
 }
 
 
