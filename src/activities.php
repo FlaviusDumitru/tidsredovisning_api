@@ -1,7 +1,7 @@
 <?php
 
 declare (strict_types=1);
-require_once __DIR__ . './funktioner.php';
+require_once __DIR__ . '/funktioner.php';
 
 /**
  * Läs av rutt-information och anropa funktion baserat på angiven rutt
